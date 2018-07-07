@@ -39,6 +39,10 @@ contract ContractRegistryBase is UnstructuredOwnable, VersionRegistry, EIP820Reg
     emit Initialized(owner);
   }
 
+  function initialized() public returns(bool) {
+    return _initialized;
+  }
+
 
   //todo BEFORE LAUNCH: onlyOwner! <-- needs to be the addr of the proxy as thats the one who sends the tx
   function setVersion(

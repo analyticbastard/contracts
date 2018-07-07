@@ -68,6 +68,10 @@ contract UnstructuredTokenBase is UnstructuredOwnable, Ierc20, IEIP777, EIP820Im
 
     _initialized = true;
   }
+
+  function initialized() public returns(bool) {
+    return _initialized;
+  }
   
   /// @return the name of the token
   function name() public view returns (string) { return mName; }

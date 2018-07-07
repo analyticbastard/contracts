@@ -29,13 +29,5 @@ module.exports = function deploy(deployer, network, accounts) {
       ],
       accounts[0]
     );
-
-    // todo only deploy this  to main net with nori mainnet addresses as owners
-    await deployer.deploy(
-      MultiSigWallet,
-      [0x1d75abdf70d84e3bec66d3ce60145dddca3bcc06],
-      web3.toBigNumber(1),
-      registry.address
-    );
   });
 };

@@ -83,6 +83,10 @@ contract BasicCommodity is UnstructuredOwnable, EIP820Implementer, ICommodity {
     setInterfaceImplementation("IVerifiableCommodity", this);
   }
 
+  function initialized() public returns(bool) {
+    return _initialized;
+  }
+
   /** @notice Return the name of the token */
   function name() public view returns (string) { return mName; }
   /** @notice Return the symbol of the token */

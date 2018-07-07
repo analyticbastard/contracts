@@ -1,4 +1,4 @@
-import { encodeCall } from '../helpers/utils';
+import { encodeCall, getParamFromTxEvent } from '../helpers/utils';
 
 const { promisify } = require('util');
 const glob = require('glob');
@@ -33,7 +33,8 @@ const deployUpgradeableContract = async (
   contract,
   registry,
   initializeParams,
-  deployParams = {}
+  deployParams = {},
+  admin
 ) => {
   const [contractName, versionName] = parseContractName(contract.contractName);
   const contractRegistry =
@@ -46,7 +47,10 @@ const deployUpgradeableContract = async (
     (await artifacts
       .require('UnstructuredOwnedUpgradeabilityProxy')
       .new(contractRegistry.address, deployParams));
-
+  if (admin) {
+    await proxy.transferProxyOwnership(admin);
+    // console.log('updateRequirementData!!!!!!!!!!!', updateRequirementData);
+  }
   const contractToMakeUpgradeable = await contract.new(deployParams);
 
   if (initializeParams) {
@@ -64,6 +68,7 @@ const deployUpgradeableContract = async (
       deployParams
     );
   } else {
+    console.log('no init', await proxy.proxyOwner());
     await proxy.upgradeTo(
       contractName,
       versionName,
@@ -124,7 +129,8 @@ const deployLatestUpgradeableContract = async (
   contractName,
   registry,
   initializeParams,
-  deployParams = {}
+  deployParams = {},
+  admin
 ) => {
   const latestVersion = await getLatestVersionFromFs(contractName);
   const latestRegistryVersion = await getLatestVersionFromFs(
@@ -149,13 +155,14 @@ const deployLatestUpgradeableContract = async (
 
 const upgradeToContract = async (
   artifacts,
-  contract,
+  contractName,
   registry,
   initializeParamTypes,
   initializeParamValues,
-  deployParams
+  deployParams,
+  admin
 ) => {
-  const [contractName, versionName] = parseContractName(contract.contractName);
+  const versionName = await getLatestVersionFromFs(contractName);
 
   let latestVersionName, proxyAddress;
   try {
@@ -179,16 +186,20 @@ const upgradeToContract = async (
 
     let existingProxy = null;
     if (proxyAddress) {
-      existingProxy = contract.at(proxyAddress);
+      existingProxy = await artifacts
+        .require('UnstructuredOwnedUpgradeabilityProxy')
+        .at(proxyAddress);
     }
+    console.log(`${contractName}V${versionName}`);
 
     const [, , newProxy] = await deployUpgradeableContract(
       artifacts,
       existingProxy,
-      contract,
+      artifacts.require(`${contractName}V${versionName}`),
       registry,
       [initializeParamTypes, initializeParamValues],
-      deployParams
+      deployParams,
+      admin
     );
     console.log(contractName, 'updated to', versionName, newProxy.address);
     return newProxy;
@@ -199,7 +210,136 @@ const upgradeToContract = async (
     versionName,
     proxyAddress
   );
-  return contract.at(proxyAddress);
+  return artifacts.require(`${contractName}V${versionName}`).at(proxyAddress);
+};
+
+// deploy an unstructured upgradeable contract and proxy, initialize the contract,
+// then create a contract at the proxy's address.
+const adminDeployUpgradeableContract = async (
+  artifacts,
+  passedProxy = null,
+  contract,
+  registry,
+  initializeParams,
+  deployParams = {},
+  admin
+) => {
+  const [contractName, versionName] = parseContractName(contract.contractName);
+  const contractRegistry =
+    registry ||
+    (await artifacts.require('ContractRegistryV0_1_0').new(deployParams));
+  // use a proxy already existing in the testrpc or deploy a new one
+  // (useful for testing multi upgrade scenarios)
+  const proxy =
+    passedProxy ||
+    (await artifacts
+      .require('UnstructuredOwnedUpgradeabilityProxy')
+      .new(contractRegistry.address, deployParams));
+
+  await proxy.transferProxyOwnership(admin.address);
+
+  const contractToMakeUpgradeable = await contract.new(deployParams);
+
+  if (
+    initializeParams &&
+    (await contractToMakeUpgradeable.initialized.call()) === false
+  ) {
+    const initializeData = encodeCall(
+      'initialize',
+      initializeParams[0], // ex: ['string', 'string', 'uint', 'uint', 'address', 'address'],
+      initializeParams[1] // ex: ['Upgradeable NORI Token', 'NORI', 1, 0, contractRegistry.address, admin]
+    );
+    const upData = proxy.contract.upgradeToAndCall.getData(
+      contractName,
+      versionName,
+      contractToMakeUpgradeable.address,
+      initializeData,
+      deployParams
+    );
+
+    await admin.submitTransaction(proxy.address, 0, upData);
+  } else {
+    const upData = proxy.contract.upgradeTo.getData(
+      contractName,
+      versionName,
+      contractToMakeUpgradeable.address,
+      deployParams
+    );
+    await admin.submitTransaction(proxy.address, 0, upData);
+  }
+
+  const upgradeableContractAtProxy = await contract.at(
+    proxy.address,
+    deployParams
+  );
+
+  return [
+    contractToMakeUpgradeable,
+    upgradeableContractAtProxy,
+    proxy,
+    contractRegistry,
+    contractName,
+    versionName,
+  ];
+};
+
+const adminUpgradeToContract = async (
+  artifacts,
+  contractName,
+  registry,
+  initializeParamTypes,
+  initializeParamValues,
+  deployParams,
+  multiAdmin
+) => {
+  const versionName = await getLatestVersionFromFs(contractName);
+
+  let latestVersionName, proxyAddress;
+  try {
+    [
+      latestVersionName,
+      ,
+      proxyAddress,
+    ] = await registry.getVersionForContractName(contractName, -1);
+  } catch (e) {
+    // doesn't exist yet, but that's OK.
+  }
+
+  if (latestVersionName !== versionName) {
+    console.log(
+      contractName,
+      'is out of date. Deployed Version:',
+      latestVersionName,
+      'New Version:',
+      versionName
+    );
+
+    let existingProxy = null;
+    if (proxyAddress) {
+      existingProxy = await artifacts
+        .require('UnstructuredOwnedUpgradeabilityProxy')
+        .at(proxyAddress);
+    }
+
+    const [, contractAtProxy, newProxy] = await adminDeployUpgradeableContract(
+      artifacts,
+      existingProxy,
+      artifacts.require(`${contractName}V${versionName}`),
+      registry,
+      [initializeParamTypes, initializeParamValues],
+      deployParams,
+      multiAdmin
+    );
+    console.log(contractName, 'updated to', versionName, newProxy.address);
+    return contractAtProxy;
+  }
+  console.log(
+    contractName,
+    'already up to date at version',
+    versionName,
+    proxyAddress
+  );
+  return artifacts.require(`${contractName}V${versionName}`).at(proxyAddress);
 };
 
 module.exports = {
@@ -208,4 +348,5 @@ module.exports = {
   getLogs,
   getLatestVersion,
   deployLatestUpgradeableContract,
+  adminUpgradeToContract,
 };

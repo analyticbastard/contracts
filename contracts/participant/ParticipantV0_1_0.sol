@@ -20,6 +20,10 @@ contract ParticipantV0_1_0 is UnstructuredOwnable, EIP820Implementer, IEIP820Imp
     setInterfaceImplementation("IParticipant", this);
     _initialized = true;
   }
+
+  function initialized() public returns(bool) {
+    return _initialized;
+  }
   
   function canImplementInterfaceForAddress(address, bytes32) public view returns(bytes32) {
     return EIP820_ACCEPT_MAGIC;

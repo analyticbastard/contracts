@@ -280,6 +280,7 @@ contract MultiAdmin is EIP820Implementer, IEIP820Implementer {
       ) {
         emit Execution(transactionId);
       } else {
+        //revert();
         emit ExecutionFailure(transactionId);
         txn.executed = false;
       }
