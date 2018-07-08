@@ -1,48 +1,54 @@
 /* globals artifacts web3 */
-const ENS = require('ethereum-ens');
 const {
   upgradeToContract,
   adminUpgradeToContract,
 } = require('../test/helpers/contracts');
 const getNamedAccounts = require('../test/helpers/getNamedAccounts');
-const assert = require('assert');
+const ensUtils = require('../test/helpers/ens');
+const utils = require('../test/helpers/utils');
+const multiSigUtils = require('../test/helpers/multisig');
 
 const ContractRegistryV0_1_0 = artifacts.require('ContractRegistryV0_1_0');
 const RootRegistryV0_1_0 = artifacts.require('RootRegistryV0_1_0');
-const NoriV0_1_0 = artifacts.require('NoriV0_1_0');
-const ParticipantRegistryV0_1_0 = artifacts.require(
-  'ParticipantRegistryV0_1_0'
-);
-const CRCV0_1_0 = artifacts.require('CRCV0_1_0');
-const ParticipantV0_1_0 = artifacts.require('ParticipantV0_1_0');
-const SupplierV0_1_0 = artifacts.require('SupplierV0_1_0');
-const VerifierV0_1_0 = artifacts.require('VerifierV0_1_0');
-const FifoCrcMarketV0_1_0 = artifacts.require('FifoCrcMarketV0_1_0');
 const MultiAdmin = artifacts.require('MultiAdmin');
 
 module.exports = (deployer, network, accounts) => {
   deployer.then(async () => {
     let registry, adminAccountAddress, multiAdmin, multiAdminAddr, rootRegistry;
+    const prepareEns = () => ensUtils.getENSDetails(network, artifacts, web3);
     if (network === 'ropstenGeth') {
       adminAccountAddress = accounts[0];
       console.log('Looking up existing registry at nori.test ENS on ropsten');
-      const ens = new ENS(web3.currentProvider);
-      const rootRegistryAddress = await ens.resolver('nori.test').addr();
-      rootRegistry = await RootRegistryV0_1_0.at(rootRegistryAddress);
+      rootRegistry = await utils.onlyWhitelisted(accounts[0], prepareEns);
       registry = await ContractRegistryV0_1_0.at(
         await rootRegistry.getLatestProxyAddr.call('ContractRegistry')
       );
-      multiAdminAddr = await rootRegistry.getLatestProxyAddr('MultiAdmin');
-      multiAdmin = await MultiAdmin.at(multiAdminAddr);
-    } else {
-      adminAccountAddress = getNamedAccounts(web3).admin0;
-      rootRegistry = await RootRegistryV0_1_0.new();
-      multiAdmin = await MultiAdmin.new(
-        [getNamedAccounts(web3).admin0, getNamedAccounts(web3).admin1],
-        1,
-        rootRegistry.address
+      [multiAdminAddr] = await multiSigUtils.prepareMultiSigs(
+        network,
+        web3,
+        artifacts,
+        accounts[0],
+        accounts[1],
+        rootRegistry
       );
-      multiAdminAddr = multiAdmin.address;
+    } else {
+      rootRegistry = await prepareEns();
+      if (rootRegistry) {
+        console.log('Found existing root registry at', rootRegistry.address);
+      } else {
+        rootRegistry = await RootRegistryV0_1_0.new();
+      }
+      [multiAdminAddr] = await multiSigUtils.prepareMultiSigs(
+        network,
+        web3,
+        artifacts,
+        getNamedAccounts(web3).admin0,
+        getNamedAccounts(web3).admin1,
+        rootRegistry
+      );
+      console.log('hi', multiAdminAddr);
+      multiAdmin = await MultiAdmin.at(multiAdminAddr);
+
       registry = await adminUpgradeToContract(
         artifacts,
         'ContractRegistry',
@@ -50,7 +56,7 @@ module.exports = (deployer, network, accounts) => {
         ['address'],
         [getNamedAccounts(web3).admin1],
         {
-          from: adminAccountAddress,
+          from: accounts[0],
         },
         multiAdmin
       );
@@ -64,7 +70,7 @@ module.exports = (deployer, network, accounts) => {
         argTypes,
         args,
         {
-          from: adminAccountAddress,
+          from: accounts[0],
         },
         multiAdmin
       );
