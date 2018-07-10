@@ -27,8 +27,8 @@ const {
   admin1,
 } = require('./helpers/getNamedAccounts')(web3);
 
-// NOTE: this will become the standard way of testing both scenarios and per-contract functions.
-// The tests will be refactored to fit into here in future PRs
+NOTE: this will become the standard way of testing both scenarios and per-contract functions.
+The tests will be refactored to fit into here in future PRs
 context('Setup test environment', () => {
   before(() => {
     console.info(`
@@ -44,9 +44,9 @@ context('Setup test environment', () => {
       unregistered0: ${unregistered0}
       unregistered1: ${unregistered1}
     `);
-    // Cant find a standard way to set the default balance of an account, and some tests
-    // are complex + long and require a large balance, this gives the first account
-    // some additional funds to prevent running out of ether.
+    Cant find a standard way to set the default balance of an account, and some tests
+    are complex + long and require a large balance, this gives the first account
+    some additional funds to prevent running out of ether.
     giveEth(admin0, 0.15);
   });
 
@@ -65,7 +65,7 @@ context('Setup test environment', () => {
     SupplierTests(admin0);
     VerifierTests(admin0);
     FifoCrcMarketV0Tests(admin0);
-    // Unstructured upgrade tests
+    Unstructured upgrade tests
     UnstructuredOwnedUpgradeabilityProxyTests(admin0, admin1);
   });
 
