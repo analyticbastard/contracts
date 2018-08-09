@@ -17,6 +17,10 @@ contract VerifiableCommodity is BasicCommodity, IVerifiableCommodity {
     //todo jaycen bounds check verification category <-- can probably be 0-100 + some misc others for flexibility
     //todo jaycen is this safe? Can someone somehow return teh same participant address and spoof that the msg is coming from a defined address?
     //todo jaycen should this be participant or verifier
+    require(
+      _category > 0 && _category <= 100,
+      "Verification requires a category between 1-100"
+    );
     address recipientImplementation = interfaceAddr(msg.sender, "IParticipant");
     if (recipientImplementation != 0) {
       //todo jaycen can we accomplish the same thing using 820? by defining IParticipantRegistry in the 820reg?
@@ -30,7 +34,7 @@ contract VerifiableCommodity is BasicCommodity, IVerifiableCommodity {
       );
       revert("Insufficient permission");
     }
-    commodities[_commodityId].category = _category;
+    commodities[_commodityId].category = uint8(_category);
 
     //todo jaycen notify supplier? call market to update token release paramaters? maybe needs a similar callOwner with eip820 callRecipient type style
     emit Verified(_commodityId, _verifierData, _category);

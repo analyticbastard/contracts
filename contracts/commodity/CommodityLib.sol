@@ -18,7 +18,7 @@ library CommodityLib {
     // that Ethereum currently has a limit of about 500 million
     // transactions per year! So, this definitely won't be a problem
     // for several years (even as Ethereum learns to scale).
-    uint64 category;
+    uint8 category;
 
     // The timestamp from the block when this commodity became registered
     uint64 timeRegistered;

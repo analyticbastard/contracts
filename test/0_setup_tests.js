@@ -53,24 +53,24 @@ context('Setup test environment', () => {
   context('Execute tests', () => {
     // todo jaycen fix this (broken when removed etsernal storage stuffz)
     // ProxyTests();
-    MultiSigWallet(); // Multisig wallet tests
-    MultiAdminTests(); // Multisig admin tests
-    ContractRegistryTests(admin0, admin1, unregistered0);
-    RootRegistryTests();
-    SelectableCrcMarketTests();
-    EIP820RegistryTests();
+    // MultiSigWallet(); // Multisig wallet tests
+    // MultiAdminTests(); // Multisig admin tests
+    // ContractRegistryTests(admin0, admin1, unregistered0);
+    // RootRegistryTests();
+    // SelectableCrcMarketTests();
+    // EIP820RegistryTests();
     CRCTests(admin0);
-    ParticipantRegistryTests(admin0);
-    ParticipantTests(admin0);
-    SupplierTests(admin0);
-    VerifierTests(admin0);
-    FifoCrcMarketV0Tests();
-    // Unstructured upgrade tests
-    UnstructuredOwnedUpgradeabilityProxyTests(admin0, admin1);
+    // ParticipantRegistryTests(admin0);
+    // ParticipantTests(admin0);
+    // SupplierTests(admin0);
+    // VerifierTests(admin0);
+    // FifoCrcMarketV0Tests();
+    // // Unstructured upgrade tests
+    // UnstructuredOwnedUpgradeabilityProxyTests(admin0, admin1);
   });
 
   context('Upgrade Scenarios', () => {
-    UnstructuredUpgradeScenarios(admin0, admin1, unregistered0);
-    NoriV0Tests(admin0, admin1, unregistered0);
+    // UnstructuredUpgradeScenarios(admin0, admin1, unregistered0);
+    // NoriV0Tests(admin0, admin1, unregistered0);
   });
 });

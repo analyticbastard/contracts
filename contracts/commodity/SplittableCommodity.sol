@@ -20,7 +20,7 @@ contract SplittableCommodity is MintableCommodity {
     commodities[_tokenId].value = commodities[_tokenId].value.sub(_amount);
 
     CommodityLib.Commodity memory _commodity = CommodityLib.Commodity({
-        category: uint64(1),
+        category: commodities[_tokenId].category,
         timeRegistered: uint64(now), // solium-disable-line
         parentId: _tokenId,
         value: _amount,

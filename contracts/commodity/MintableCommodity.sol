@@ -49,7 +49,7 @@ contract MintableCommodity is BasicCommodity, IMintableCommodity {
     /// it should only be used to keep a "soft" record for mint time
     /// ref: https://ethereum.stackexchange.com/a/9752
     CommodityLib.Commodity memory _commodity = CommodityLib.Commodity({
-        category: uint64(1),
+        category: uint8(0),
         timeRegistered: uint64(now), // solium-disable-line
         parentId: 0,
         value: uint256(_value),
